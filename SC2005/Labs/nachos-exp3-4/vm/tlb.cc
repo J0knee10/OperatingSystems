@@ -12,6 +12,8 @@
 // Figures out what to do (get from IPT, or pageoutpagein) and does it.
 //----------------------------------------------------------------------
 
+static int FIFOPointer = 0;
+
 void UpdateTLB(int possible_badVAddr)
 {
   int badVAddr;
@@ -40,10 +42,19 @@ void UpdateTLB(int possible_badVAddr)
 //      Gets a phyPage for a vpn, if exists in ipt.
 //----------------------------------------------------------------------
 
-int VpnToPhyPage(int vpn)
+int VpnToPhyPage(int vpn) //THIS IS PART OF THE LAB
 {
   //your code here to get a physical frame for page vpn
   //you can refer to PageOutPageIn(int vpn) to see how an entry was created in ipt
+    // loop through IPT to find physical page 
+    for (int i = 0; i <NumPhysPages; i++){
+        // follow the conditions in the briefing slides
+        if ((memoryTable[i].valid) && (memoryTable[i].pid == currentThread->pid) && (memoryTable[i].vPage == vpn)){
+            printf("Physical page at frame %d\n", i);
+            return i;
+        }
+    }
+    return -1;
 }
 
 //----------------------------------------------------------------------
@@ -52,11 +63,24 @@ int VpnToPhyPage(int vpn)
 //    replacement
 //----------------------------------------------------------------------
 
-void InsertToTLB(int vpn, int phyPage)
+void InsertToTLB(int vpn, int phyPage) //THIS IS PART OF THE LAB
 {
-  int i = 0; //entry in the TLB
+  int i = FIFOPointer; //entry in the TLB
   
   //your code to find an empty in TLB or to replace the oldest entry if TLB is full
+  
+  for (int j =0; j < TLBSize; j++){
+      // empty spot found
+      if (!machine->tlb[j].valid){
+          i = j;
+          break;
+      }
+  }
+  
+    FIFOPointer = (i+1)%TLBSize; // recent replacement are always treated as newest, 
+    printf("New FIFOPointer at %d\n", FIFOPointer); // thus never overwriting new entries. Breaks FIFO abit, but to implement properly likely need a queue structure
+
+  
   
   // copy dirty data to memoryTable
   if(machine->tlb[i].valid){
@@ -74,10 +98,17 @@ void InsertToTLB(int vpn, int phyPage)
 
   //update the corresponding memoryTable
   memoryTable[phyPage].TLBentry=i;
-  DEBUG('p', "The corresponding TLBentry for Page %i in TLB is %i ", vpn, i);
+  DEBUG('p', "The corresponding TLBentry for Page %i in TLB is %i \n", vpn, i);
   //reset lastUsed to current ticks since it is being used at this moment.
   //for the implementation of LRU algorithm.
   memoryTable[phyPage].lastUsed = stats->totalTicks; 
+  
+printf("IPT[%d]: pid=%d vpn=%d lastUsed=%d valid=%d\n",
+       phyPage,
+       memoryTable[phyPage].pid,
+       memoryTable[phyPage].vPage,  // note: your field is vPage, not virtualPage
+       memoryTable[phyPage].lastUsed,
+       memoryTable[phyPage].valid);
   
   //increase the number of tlb misses
   stats->numTlbMisses++;
@@ -203,11 +234,26 @@ void DoPageIn(int vpn, int phyPage)
 // lectures.
 //----------------------------------------------------------------------
 
-int lruAlgorithm(void)
+int lruAlgorithm(void) //THIS IS PART OF THE LAB
 {
   //your code here to find the physical frame that should be freed 
   //according to the LRU algorithm. 
-  int phyPage;
+  int phyPage = 0;
+  int last = memoryTable[0].lastUsed;
+  
+  for (int i = 0; i < NumPhysPages; i++){
+      if (!memoryTable[i].valid){
+          phyPage = i;
+          break;
+      }
+      
+      if (memoryTable[i].lastUsed < last){
+          last = memoryTable[i].lastUsed;
+          phyPage = i;
+      }
+  }
+  
+  
   
   return phyPage;
 }

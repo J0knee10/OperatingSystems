@@ -255,7 +255,7 @@ ThreadTest()
     DEBUG('t', "Entering SimpleTest");
 	//for exercise 1.
     //TestValueOne();
-    TestValueMinusOne();
+    //TestValueMinusOne();
     //for exercise 2.
-    //TestConsistency();
+    TestConsistency();
 }

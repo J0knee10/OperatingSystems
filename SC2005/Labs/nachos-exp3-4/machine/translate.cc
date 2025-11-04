@@ -226,6 +226,7 @@ Machine::Translate(int virtAddr, int* physAddr, int size, bool writing)
         
         // Record last used of page
         memoryTable[tlb[i].physicalPage].lastUsed = stats->totalTicks;
+       printf("\n                                           IPT[%d]: vpn=%d, lastUsed=%d\n", tlb[i].physicalPage, memoryTable[tlb[i].physicalPage].vPage, memoryTable[tlb[i].physicalPage].lastUsed);
         break;
       }
     if (entry == NULL) {        // not found
